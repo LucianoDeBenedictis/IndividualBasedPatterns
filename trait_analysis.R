@@ -92,6 +92,7 @@ dev.off()
 ## by community----
 
 funcommunity <- funspace(pca_results, group.vec = dattt$Comm)
+capture.output(summary(funcommunity), file = "traits/funspacesummary.txt")
 
 #for submission
 
