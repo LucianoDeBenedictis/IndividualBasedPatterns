@@ -120,6 +120,12 @@ for(i in 1:10){
 rm(i)
 LA <- lapply(LA, function(x) subset(x, LA >= 0))
 
+LS <- solist()
+for(i in 1:10){
+  LS[[i]] <- datpp[[i]] %mark% marks(datpp[[i]])[c("Species","LS")]
+  names(LS)[i] <- read_me2[i]
+}
+rm(i)
 
 # NAs in marks----
 
@@ -307,6 +313,9 @@ programLA <- lapply(LA, as.data.frame) |>
 programSLA <- lapply(SLA, as.data.frame) |> 
   lapply(function(x) select(x,-Species))
 
+programLS <- lapply(LS, as.data.frame) |> 
+  lapply(function(x) select(x,-Species))
+
 ## height-----
 programheight <- programheight |> 
   map(~ .x |>  mutate(pattern=1, dummy= 0) |> 
@@ -335,6 +344,16 @@ programLA <- programLA |>
 for (i in 1:10){
   writeLines(paste("0", "50", "0", "50", nrow(programLA[[i]]), sep="\t"), paste0("LA",i,".mcf"))
   write.table(programLA[[i]], paste0("LA",i,".mcf"),col.names=FALSE, row.names=FALSE, append=TRUE)
+}
+
+## LS-----
+programLS <- programLS |> 
+  map(~ .x |>  mutate(pattern=1, dummy= 0) |> 
+        relocate(pattern, .after=y))
+
+for (i in 1:10){
+  writeLines(paste("0", "50", "0", "50", nrow(programLS[[i]]), sep="\t"), paste0("LS",i,".mcf"))
+  write.table(programLS[[i]], paste0("LS",i,".mcf"),col.names=FALSE, row.names=FALSE, append=TRUE)
 }
 
 ## PCA----
@@ -381,6 +400,14 @@ program_bivar2 <- function(x){
 }
 dir.create(file.path(getwd(),"heterospecifics"), recursive = TRUE)
 
+programheight <- lapply(height, as.data.frame)
+
+programLA <- lapply(LA, as.data.frame)
+
+programSLA <- lapply(SLA, as.data.frame)
+
+programLS <- lapply(LS, as.data.frame)
+
 ###height----
 program_bivar2(programheight[1:5])
 
@@ -394,6 +421,11 @@ program_bivar2(programSLA[c(6,8,9,10)])
 program_bivar2(programLA[1:5])
 program_bivar2(programLA[c(6,8,9,10)])
 
+###LS----
+program_bivar2(programLS[1:5])
+programLS[[8]][81,3] <- "not determined"
+program_bivar2(programLS[c(6,8,9,10)])
+
 ###PCA----
 programPC1 <- lapply(datPCA, function(x) select(x, x, y, Species, PC1))
 programPC2 <- lapply(datPCA, function(x) select(x, x, y, Species, PC2))
@@ -403,6 +435,78 @@ program_bivar2(programPC1[c(6,8,9,10)])
 
 program_bivar2(programPC2[1:5])
 program_bivar2(programPC2[c(6,8,9,10)])
+
+# species means only ------------------------------------------------------
+
+means <- read.csv("Data/speciesmeans.csv")
+
+dir.create("means")
+
+add_trait_means <- function(x, trait, comm){
+  means <- means |>
+    filter(comm == {{comm}}) |> 
+    select(Species, {{trait}})
+  left_join(x, means)
+}
+
+program_bivar_mean <- function(x){
+  for (k in seq_along(x)){
+    df <- x[[k]]
+    df$mark <- df[[4]]
+    species <- unique(df$Species)
+    for(i in seq_along(species)){
+      output <- df |> 
+        mutate(pattern = if_else(Species == species[i], 1, 2))|> 
+        relocate(pattern, .after=y) |> 
+        select(-Species)
+      writeLines(paste("0", "50", "0", "50", nrow(df), sep="\t"), 
+                 paste0(getwd(),"/means/",names(df[4]), names(x[k]), species[i],".mcf"))
+      write.table(output, paste0(getwd(),"/means/",names(df[4]), names(x[k]), species[i],".mcf"),
+                  col.names=FALSE, row.names=FALSE, append=TRUE)
+    }
+  }
+}
+
+## height -----------------------------------------------------------------
+
+height_mean_closed <- programheight[1:5] |> 
+  map(~ select(.x,-height)) |> 
+  map(~ add_trait_means(.x, "height", "CLOSED")) |> 
+  map(~ select(.x, !Species)) |> 
+  map(~ .x |>  mutate(pattern=1, dummy= 0) |> 
+        relocate(pattern, .after=y))
+
+for (i in 1:5){
+  writeLines(paste("0", "50", "0", "50", nrow(height_mean_closed[[i]]), sep="\t"), paste0("mean_height",i,".mcf"))
+  write.table(height_mean_closed[[i]], paste0("mean_height",i,".mcf"),col.names=FALSE, row.names=FALSE, append=TRUE)
+}
+
+height_mean_closed <- programheight[1:5] |> 
+  map(~ select(.x,-height)) |> 
+  map(~ add_trait_means(.x, "height", "CLOSED"))
+
+program_bivar_mean(height_mean_closed)
+
+## LA -----------------------------------------------------------------
+
+LA_mean_closed <- programLA[1:5] |> 
+  map(~ select(.x,-LA)) |> 
+  map(~ add_trait_means(.x, "LA", "CLOSED")) |> 
+  map(~ select(.x, !Species)) |> 
+  map(~ .x |>  mutate(pattern=1, dummy= 0) |> 
+        relocate(pattern, .after=y))
+
+for (i in 1:5){
+  writeLines(paste("0", "50", "0", "50", nrow(LA_mean_closed[[i]]), sep="\t"), paste0("mean_LA",i,".mcf"))
+  write.table(LA_mean_closed[[i]], paste0("mean_LA",i,".mcf"),col.names=FALSE, row.names=FALSE, append=TRUE)
+}
+
+LA_mean_closed <- programLA[1:5] |> 
+  map(~ select(.x,-LA)) |> 
+  map(~ add_trait_means(.x, "LA", "CLOSED"))
+
+program_bivar_mean(LA_mean_closed)
+
 
 #intensity for ring width----
 lamb <- sapply(datpp, intensity)

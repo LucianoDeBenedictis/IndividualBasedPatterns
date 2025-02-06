@@ -847,3 +847,142 @@ PCA_loc <- patch(list(plot_PCAclosedvario_het_loc, plot_PCAopenvario_loc), ncol 
 PCA_loc
 ggsave('Plots/PCA_loc.png', width = 7, height = 3.5, units = "in",
        bg = 'white', scale = 1.2, dpi = 1000)
+
+
+# species means -----------------------------------------------------------
+
+## Height closed-----------------------------------------------------------
+
+Hclosedmean <- read.table("Mean/H_CLOSEDmean.rep", nrows=126000, sep="", fill=T, header=T, dec=".")
+
+##mark correlation
+
+Hclosedmcmean <- make_envelope(Hclosedmean, "kmm_uni") |> 
+  crop_curves(r_min=0, r_max = 125)
+
+plot_Hclosedmcmean <- plot_GE(Hclosedmcmean)+
+  ylab(expression(italic(k[mm](r))))
+
+
+##variogram
+
+Hclosedvariomean <- make_envelope(Hclosedmean, "vario_uni") |> 
+  crop_curves(r_min=0, r_max = 125)
+
+plot_Hclosedvariomean <- plot_GE(Hclosedvariomean)+
+  ylab(expression(italic(gamma[m](r))))
+
+##denscorr
+
+Hcloseddensmean <- make_envelope(Hclosedmean, "cordens") |> 
+  crop_curves(r_min=0, r_max = 124)
+
+plot_Hcloseddensmean <- plot_GE(Hcloseddensmean)+
+  ylab(expression(italic(C[mK](r))))
+
+
+### heterospecific -------------------------------------------------
+
+Hclosedhetmean <- read.table("Mean/H_CLOSEDmeanhet.rep", nrows=126000, sep="", fill=T, header=T, dec=".")
+
+###mark correlation
+
+Hclosedmc_hetmean <- make_envelope(Hclosedhetmean, fun = "kmm_biv")
+
+plot_Hclosedmc_hetmean <- plot_GE(Hclosedmc_hetmean)+
+  ylab(expression(italic(k[mm](r))))
+
+###mark variogram
+
+Hclosedvario_hetmean <- make_envelope(Hclosedhetmean, fun = "vario_biv")
+
+plot_Hclosedvario_hetmean <- plot_GE(Hclosedvario_hetmean)+
+  ylab(expression(italic(gamma[m](r))))
+
+###rmark
+
+Hclosedrm_hetmean <- make_envelope(Hclosedhetmean, fun = "rmark2_biv")
+
+plot_Hclosedrm_hetmean <- plot_GE(Hclosedrm_hetmean)+
+  ylab(expression(italic(k[.m](r))))
+
+
+H_closedmean <- list(plot_Hclosedmcmean, plot_Hclosedvariomean, plot_Hcloseddensmean,
+                 plot_Hclosedmc_hetmean, plot_Hclosedvario_hetmean, plot_Hclosedrm_hetmean)
+
+patch(H_closedmean)+
+  plot_annotation(theme = theme(plot.title = element_text(hjust = 0.5, face = "bold",
+                                                          margin = margin(0,0,0,0, unit = "in"))))
+
+
+
+ggsave('Plots/heightmean.png', width = 7, height = 3.5, units = "in",
+       bg = 'white', scale = 1.5, dpi = 1000)
+
+## LA closed-----------------------------------------------------------
+
+LAclosedmean <- read.table("Mean/LA_CLOSEDmean.rep", nrows=126000, sep="", fill=T, header=T, dec=".")
+
+##mark correlation
+
+LAclosedmcmean <- make_envelope(LAclosedmean, "kmm_uni") |> 
+  crop_curves(r_min=0, r_max = 125)
+
+plot_LAclosedmcmean <- plot_GE(LAclosedmcmean)+
+  ylab(expression(italic(k[mm](r))))
+
+
+##variogram
+
+LAclosedvariomean <- make_envelope(LAclosedmean, "vario_uni") |> 
+  crop_curves(r_min=0, r_max = 125)
+
+plot_LAclosedvariomean <- plot_GE(LAclosedvariomean)+
+  ylab(expression(italic(gamma[m](r))))
+
+##denscorr
+
+LAcloseddensmean <- make_envelope(LAclosedmean, "cordens") |> 
+  crop_curves(r_min=0, r_max = 124)
+
+plot_LAcloseddensmean <- plot_GE(LAcloseddensmean)+
+  ylab(expression(italic(C[mK](r))))
+
+
+### heterospecific -------------------------------------------------
+
+LAclosedhetmean <- read.table("Mean/LA_CLOSEDmeanhet.rep", nrows=126000, sep="", fill=T, header=T, dec=".")
+
+###mark correlation
+
+LAclosedmc_hetmean <- make_envelope(LAclosedhetmean, fun = "kmm_biv")
+
+plot_LAclosedmc_hetmean <- plot_GE(LAclosedmc_hetmean)+
+  ylab(expression(italic(k[mm](r))))
+
+###mark variogram
+
+LAclosedvario_hetmean <- make_envelope(LAclosedhetmean, fun = "vario_biv")
+
+plot_LAclosedvario_hetmean <- plot_GE(LAclosedvario_hetmean)+
+  ylab(expression(italic(gamma[m](r))))
+
+###rmark
+
+LAclosedrm_hetmean <- make_envelope(LAclosedhetmean, fun = "rmark2_biv")
+
+plot_LAclosedrm_hetmean <- plot_GE(LAclosedrm_hetmean)+
+  ylab(expression(italic(k[.m](r))))
+
+
+LA_closedmean <- list(plot_LAclosedmcmean, plot_LAclosedvariomean, plot_LAcloseddensmean,
+                     plot_LAclosedmc_hetmean, plot_LAclosedvario_hetmean, plot_LAclosedrm_hetmean)
+
+patch(LA_closedmean)+
+  plot_annotation(theme = theme(plot.title = element_text(hjust = 0.5, face = "bold",
+                                                          margin = margin(0,0,0,0, unit = "in"))))
+
+
+
+ggsave('Plots/LAmean.png', width = 7, height = 3.5, units = "in",
+       bg = 'white', scale = 1.5, dpi = 1000)

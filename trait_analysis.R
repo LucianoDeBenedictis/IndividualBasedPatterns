@@ -35,9 +35,10 @@ for(i in seq_along(read_me)){
   df$Species <- str_trim(df$Species)
   df$Species <- as.factor(df$Species)
   df <- df[,-9]
-  df <- df |> select(x,y,Species,soil.depth:LA)
-  df <- df |> drop_na(x,y)
-  df <- df |> mutate(LA = na_if(LA, 0))
+  df <- df |> select(x,y,Species,soil.depth:LA) |> 
+    drop_na(x,y) |> 
+    mutate(LA = na_if(LA, 0)) |> 
+    relocate(height, .after = LS)
   dat[[i]]<-df
   names(dat)[i]<-read_me2[i]
 }
@@ -49,10 +50,23 @@ specieslookup[2:5] <- lapply(specieslookup[2:5], as.logical)
 dat <- lapply(dat, function(x) left_join(x, specieslookup))
 rm(specieslookup, read_me, read_me2)
 
+
+# trait means -------------------------------------------------------------
+
+means <- dat |> 
+  bind_rows(.id = "comm") |> 
+  mutate(comm=str_extract(comm,"^[^-]+")) |> 
+  group_by(Species, comm) |> 
+  select(!c(x, y)) |> 
+  summarise(across(where(is.numeric), ~ mean(., na.rm = T)), n = n()) |> 
+  mutate(across(where(is.numeric), ~ na_if(., NaN)))
+
+write.csv(means, "Data/speciesmeans.csv")
+
 # multi-trait with PCA ----------------------------------------------------
 
-datPCA <- lapply(dat, na.omit)
-datPCA <- map(datPCA, ~.x[,c(-4,-6)])
+datPCA <- lapply(dat, function(x) drop_na(x, height:LA))
+
 dattt <- do.call(rbind, datPCA)
 dattt <- dattt |> rename(Height=height)
 
@@ -62,13 +76,13 @@ hist(log10(dattt$SLA))
 hist(log10(dattt$LA))
 
 dattt <- dattt |> 
-  mutate(across(4:6, log10))
+  mutate(across(Height:LA, log10))
 
 #how many dimensions?
 
-funspaceDim(dattt[4:6]) #2
+funspaceDim(dattt[6:8]) #2
 
-pca_results <- princomp(dattt[,c(4:6)], cor = T)  #same results as prcomp, down to numerical accuracy
+pca_results <- princomp(dattt[6:8], cor = T)  #same results as prcomp, down to numerical accuracy
 #it is allowed to invert both loadings and scores
 pca_results$loadings[,1] <- -pca_results$loadings[,1]
 pca_results$scores[,1] <- -pca_results$scores[,1]
@@ -108,7 +122,7 @@ dev.off()
 png('funspacelog.png', bg = "white", width = 7, height = 3.5, units = "in",
     pointsize = 8, res = 1000)
 par(mfrow=c(1,2), mar = c(par("mar")[1], par("mar")[2], par("mar")[4], par("mar")[4]), bg= "white")
-plot(funcommunity, type = "groups", globalContour=T, globalContour.lwd = 2,quant.plot = T,
+plot(funcommunity, type = "groups", globalContour=T, globalContour.lwd = 2, quant.plot = T,
      quant = c(0.99,0.95,0.5), arrows = T, arrows.length = 0.8, arrows.label.pos = 1.2)
 dev.off()
 
@@ -120,6 +134,34 @@ plot(funcommunity, type = "groups", globalContour=T, globalContour.lwd = 2,quant
      quant = c(0.99,0.95,0.5), arrows = T, arrows.length = 0.7, arrows.label.pos = 1.2)
 dev.off()
 
+## funspace GAM----
+
+#soil
+soilGAM <- funspaceGAM(dattt[["soil.depth"]], funcommunity)
+
+png('soilGAM.png', bg = "white", width = 7, height = 3.5, units = "in",
+    pointsize = 8, res = 1000)
+par(mfrow=c(1,2), mar = c(par("mar")[1], par("mar")[2], par("mar")[4], par("mar")[4]), bg= "white")
+plot(soilGAM, type = "groups", globalContour = T, globalContour.lwd = 2, quant.plot = T,
+     quant = c(0.25, 0.5, 0.75, 0.99), quant.col = "lightsalmon", arrows = T, arrows.length = 0.8,
+     arrows.label.pos = 1.2)
+dev.off()
+
+capture.output(summary(soilGAM),  file = "soilGAM.txt")
+
+#HS
+spreadGAM <- funspaceGAM(dattt[["LS"]], funcommunity)
+
+png('spreadGAM.png', bg = "white", width = 7, height = 3.5, units = "in",
+    pointsize = 8, res = 1000)
+par(mfrow=c(1,2), mar = c(par("mar")[1], par("mar")[2], par("mar")[4], par("mar")[4]), bg= "white")
+plot(spreadGAM, type = "groups", globalContour = T, globalContour.lwd = 2, quant.plot = T,
+     quant = c(0.25, 0.5, 0.75, 0.99), quant.col = "lightsalmon", arrows = T, arrows.length = 0.8,
+     arrows.label.pos = 1.2)
+dev.off()
+
+capture.output(summary(spreadGAM),  file = "spreadGAM.txt")
+
 ##growth form-----
 
 comb_form <- data.frame(expand.grid(forb=F:T, Comm=1:2), condition= c("Grass, Closed", "Forb, Closed",
@@ -129,7 +171,7 @@ comb_form$Comm <- factor(comb_form$Comm,labels = c("Closed", "Open"))
 
 dattt1 <- left_join(dattt,comb_form)
 dattt1 <- dattt1 |> filter(woody==F)
-pca_results1 <- princomp(dattt1[,c(4:6)], cor = T)
+pca_results1 <- princomp(dattt1[,6:8], cor = T)
 
 funform <- funspace(pca_results1,group.vec = dattt1$condition)
 par(mfrow=c(2,2))
@@ -147,7 +189,7 @@ comb_clon$clonal <- as.logical(comb_clon$clonal)
 comb_clon$Comm <- factor(comb_clon$Comm,labels = c("Closed", "Open"))
 dattt2 <- left_join(dattt,comb_clon)
 rm(comb_clon)
-pca_results <- princomp(dattt2[,c(4:6)], cor = T)
+pca_results <- princomp(dattt2[,6:8], cor = T)
 
 funclone <- funspace(pca_results,group.vec = dattt2$condition)
 par(mfrow=c(2,2))
@@ -170,8 +212,7 @@ dattt_TPD <- dattt |>
 
 #for single traits
 
-dattt_norm <- do.call(rbind, dat) |> 
-  relocate(LS, .before = height)
+dattt_norm <- do.call(rbind, dat)
 
 #log10-transform
 dattt_norm <- dattt_norm |> 
@@ -759,7 +800,7 @@ ggplot(trait_summary)+
 
 #boxplot
 dattt_nolog |> 
-  select(4:8 | 14) |> 
+  select(5:9 | 14) |> 
   pivot_longer(!Comm, names_to = "trait") |> 
 ggplot()+
   geom_boxplot(aes(x=Comm, y=value))+
